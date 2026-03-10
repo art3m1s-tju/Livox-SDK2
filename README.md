@@ -1,315 +1,111 @@
-# 1. Introduction
+# FASTLIO2_ROS2 & Livox-SDK2 整合工作空间
 
-Livox SDK2 is a software development kit designed for all Livox lidars such as HAP and Mid-360. It is developed based on C/C++ following Livox SDK2 Communication Protocol, and provides easy-to-use C style APIs. With the Livox SDK2, users can quickly connect to the Livox Lidars and receive point cloud data.
+欢迎来到本整合项目！本仓库包含了一整套基于 Livox 激光雷达进行 SLAM（即时定位与建图）的完整解决方案，包括 **Livox-SDK2** 核心驱动库、**Livox ROS2 驱动**、**FAST_LIO 的 ROS2 版本**，以及相关的测试数据包和保存的地图，开箱即用（需先完成编译配置）。
 
-Livox SDK2 consists of [Livox SDK2 core code](sdk_core/), [Livox SDK2 APIs](include/livox_lidar_api.h) and three [samples](samples/).
+## 📂 仓库目录结构
 
-## Livox SDK2 API
+本仓库的当前文件夹结构及各个模块的说明如下：
 
-Livox SDK2 API provides a set of C-style APIs, which can be conveniently integrated in C/C++ programs. Please refer to the **[Livox SDK2 APIs](include/livox_lidar_api.h)**.
-
-## Livox SDK2 Communication Protocol
-
-Livox SDK2 communication protocol opens to all users. It is the communication protocol between user programs and livox products. The protocol consists of control commands and data format, please refer to the documents below:
-
-**HAP(TX/T1)**:
-
-* [HAP Communication protocol](<https://github.com/Livox-SDK/Livox-SDK2/wiki/Livox-SDK-Communication-Protocol-HAP>) (中文)
-* [HAP Communication protocol](<https://github.com/Livox-SDK/Livox-SDK2/wiki/Livox-SDK-Communication-Protocol-HAP(English)>) (English)
-
-**Mid-360**:
-
-* [Mid-360 Communication protocol](https://livox-wiki-cn.readthedocs.io/zh_CN/latest/tutorials/new_product/mid360/mid360.html) (中文)
-* [Mid-360 Communication protocol](https://livox-wiki-en.readthedocs.io/en/latest/tutorials/new_product/mid360/mid360.html) (English)
-
-
-# 2. Installation
-
-## 2.1 Prerequisites
-
-* OS:
-  * Linux: Ubuntu 18.04 or above
-  * Windows 10 / 11
-
-* Tools:
-  * compilers that support C++11
-  * cmake 3.0+
-
-* Arch:
-  * x86
-  * ARM
-## 2.2 Instruction for Ubuntu 20.04
-
-1. Dependencies:
-
-* [CMake 3.0.0+](https://cmake.org/)
-* gcc 4.8.1+
-
-2. Install the **CMake** using apt:
-
-```shell
-$ sudo apt install cmake
+```text
+.
+├── README.md                   # 本说明文件
+├── README_CN.md                # 详细的系统架构说明及官方步骤备份
+├── FASTLIO2_roadmap.md         # FASTLIO2_ROS2 版本的开发路线图与进度
+├── relocation.md               # 模块级文档：重定位功能的详细测试与原理说明
+├── 1.png ~ 8.png               # 说明文档配套展示图片 (如 relocation.md 及 Roadmap 中引用)
+├── LICENSE.txt                 # 项目开源许可证
+├── CHANGELOG.md                # 更新日志
+│
+├── map/                        # 用于存放系统生成的点云地图 (PCD 格式)
+├── rosbag2_2024_06_20.../      # 预置的 ROS2 测试数据包 (rosbag)，可直接用于测试建图与定位
+│
+├── include/                    # \
+├── sdk_core/                   #  > Livox-SDK2 核心底层库代码及头文件
+├── samples/                    # /  (原厂自带示例及 SDK 实现)
+├── build/                      # Livox-SDK2 编译生成的 build 目录
+├── CMakeLists.txt              # Livox-SDK2 的 CMake 构建文件
+│
+└── ws_livox/                   # 核心 ROS2 工作空间 (SLAM 与驱动)
+    └── src/
+        ├── livox_ros_driver2/  # Livox 官方 ROS2 雷达驱动节点
+        └── FASTLIO2_ROS2/      # FAST_LIO 的 ROS2 移植版核心代码
+                                # (包含 LIO 里程计、PGO 回环检测、重定位及地图优化等节点)
 ```
 
-3. Compile and install the Livox-SDK2:
+---
 
-```shell
-$ git clone https://github.com/Livox-SDK/Livox-SDK2.git
-$ cd ./Livox-SDK2/
-$ mkdir build
-$ cd build
-$ cmake .. && make -j
-$ sudo make install
+## 🚀 快速开始
+
+本项目针对 Ubuntu 22.04及 ROS2 Humble 环境设计配置。如果你刚克隆此仓库，请按以下步骤快速编译和运行整个系统：
+
+### 1. 编译并安装 Livox-SDK2
+
+首先编译底层的 Livox 官方 SDK 库：
+
+```bash
+cd Livox-SDK2
+mkdir -p build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+sudo ldconfig
 ```
 
-**Note :**  
-The generated shared library and static library are installed to the directory of "/usr/local/lib". The header files are installed to the directory of "/usr/local/include".
+### 2. 编译 ROS2 工作空间 (`ws_livox`)
 
-Tips: Remove Livox SDK2:
+```bash
+# 进入 ROS2 工作空间
+cd ~/Livox-SDK2/ws_livox
 
-```shell
-$ sudo rm -rf /usr/local/lib/liblivox_lidar_sdk_*
-$ sudo rm -rf /usr/local/include/livox_lidar_*
+# 引入 ROS2 环境
+source /opt/ros/humble/setup.bash
+
+# 编译所有 ROS2 包 (包括 livox_ros_driver2 和 FASTLIO2_ROS2)
+# 使用 symlink-install 可以方便后续的代码修改调试
+colcon build --symlink-install
 ```
 
-## 2.3 Instruction for Windows 10
+### 3. 配置环境变量 (推荐)
 
-1. Dependencies:
+为了让系统能够找到刚刚编译的包，建议将以下命令添加到你的 `~/.bashrc` 中：
 
-* Visual Studio 2019
-* [CMake 3.0.0+](https://cmake.org/)
-
-2. Preparation:
-
-```cmd
-> git clone https://github.com/Livox-SDK/Livox-SDK2.git
-> cd Livox-SDK2
-> md build && cd build
+```bash
+echo 'export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib' >> ~/.bashrc
+echo 'source ~/Livox-SDK2/ws_livox/install/setup.bash' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-3. Generate a project
-* 64-bit project:
+---
 
-```cmd
-> cmake .. -G "Visual Studio 16 2019" -A x64
+## 🎮 节点运行与测试
+
+通过预置的数据包测试算法是否正常工作：
+
+### 启动 LIO 建图算法
+
+打开终端运行 LIO（激光惯性里程计）节点：
+```bash
+ros2 launch fastlio2 lio_launch.py
+```
+*(如果没有自动打开 RViz，可新建终端运行 `rviz2` 并在界面中添加 PointCloud2 `/cloud_registered` 及 Path `/path` 以便查看)。*
+
+### 播放预置数据包进行验证
+
+在另一个终端播放仓库中附带的 `.db3` bag 包以提供传感器点云与 IMU 数据：
+
+```bash
+ros2 bag play ~/Livox-SDK2/rosbag2_2024_06_20-16_46_47/rosbag2_2024_06_20-16_46_47_0.db3
 ```
 
-* 32-bit project:
+建图完成后，你可以查看 `maps/` 目录下相关的地图输出。如果是全功能版的 `FASTLIO2_ROS2`，还支持启动 PGO (回环节点) 或 Localizer (重定位节点)。
 
-```cmd
-> cmake .. -G "Visual Studio 16 2019" -A Win32
-```
+> 深入了解高级功能：  
+> - 👉 关于**环境重定位功能**的测试和开发，请参阅 [`relocation.md`](relocation.md)
+> - 👉 关于**当前版本的开发功能进度规划**，请参阅 [`FASTLIO2_roadmap.md`](FASTLIO2_roadmap.md)
+> - 👉 关于**环境的完整配置细节及原架构解析**，请参阅 [`README_CN.md`](README_CN.md)
 
-4. Compiling:
+---
 
-You can now compile the Livox-SDK2 in Visual Studio 2019.
+## 📞 技术交流与反馈
 
-
-# 3. Run the Samples
-
-Livox SDK2 includes three samples, which are "livox_lidar_quick_start", "logger" and "multi_lidars_upgrade".
-
-## 3.1 Livox lidar quick start sample
-
-### In Ubuntu 20.04
-
-Connect to the Lidar(s), and run the program '**livox_lidar_quick_start**' :
-
-```shell
-$ cd samples/livox_lidar_quick_start && ./livox_lidar_quick_start ../../../samples/livox_lidar_quick_start/[config file]
-```
-
-### In Windows 10
-After compiling the Livox SDK2 as shown in Installation above, you can find '**livox_lidar_quick_start.exe**' in the directory of '**Livox-SDK2\\build\\samples\\livox_lidar_quick_start\\Debug(or Release)\\**'.
-
-Copy the config file '**Livox-SDK2\\samples\\livox_lidar_quick_start\\[config file]**' into the directory containing the program '**livox_lidar_quick_start.exe**', and run:
-
-
-```cmd
-> livox_lidar_quick_start.exe [config file]
-```
-
-Then you can see the information as below:
-
-```shell
-> [info] Data Handle Init Succ.  [data_handler.cpp] [Init] [42]
-> [info] Create detection channel detection socket:0  [device_manager.cpp] [CreateDetectionChannel] [232]
-```
-
-**Note** : 
-1. [config file] in the command above represents the config file name, you can choose different config file depends on your needs.
-
-## 3.2 Logger sample
-
-### Parameters Configuration
-
-| Parameter    | Detailed description                                         | Default |
-| ------------ | ------------------------------------------------------------ | ------- |
-| lidar_log_enable | Enable or disable lidar logger. <br>Logger is enabled by default. | true    |
-| lidar_log_cache_size_MB  | Set lidar log cache size. The unit is MB .<br> | 500       |
-| lidar_log_path  | Set the save path of lidar log file.<br>The log file is saved in the current path by default.  | "./"       |
-
-These Parameters are located in hap_config.json / mid360_config.json files.
-
-### Run the 'logger' in Ubuntu 20.04
-
-Connect to the Lidar(s), and run the program '**logger**' :
-
-```shell
-$ cd samples/logger && ./logger ../../../samples/logger/[config file]
-```
-
-### Run the 'logger' in Windows 10
-
-After compiling the Livox SDK2 as shown in Installation above, you can find '**logger.exe**' in the directory of '**Livox-SDK2\\build\\samples\\logger\\Debug(or Release)\\**'.
-
-Copy the config file '**Livox-SDK2\\samples\\logger\\[config file]**' into the directory containing the program '**logger.exe**', and run:
-
-
-```cmd
-> logger.exe [config file]
-```
-
-**Note** : 
-1. [config file] in the command above represents the config file name, you can choose different config file depends on your needs.
-
-## 3.3 Multi-lidars upgrade sample
-
-### in Ubuntu 20.04
-
-Connect to the Lidar(s), and run the program '**multi_lidars_upgrade**' :
-
-```shell
-$ cd samples/multi_lidars_upgrade && ./multi_lidars_upgrade ../../../samples/[config file] [firmware file path]
-```
-After executing the above command, Lidar stops and the firmware upgrade starts. 
-The Lidar(s) upgrade takes a while and the upgrade progress is printed on termial. Also "upgrade successfully" will be printed on terminal when finishing upgrading.
-
-### in Windows 10
-After compiling the Livox SDK2 as shown in Installation above, you can find '**multi_lidars_upgrade.exe**' in the directory of '**Livox-SDK2\\build\\samples\\multi_lidars_upgrade\\Debug(or Release)\\**'.
-
-Copy the config file '**Livox-SDK2\\samples\\multi_lidars_upgrade\\[config file]**' and firmware file into the directory containing the program '**multi_lidars_upgrade.exe**', and run:
-
-```cmd
-> multi_lidars_upgrade.exe [config file] [firmware file name]
-```
-
-
-**Note** : 
-1. [config file] in the command above represents the config file name, you can choose different config file depends on your needs.
-
-# 4. Config file
-## 4.1 Basic Configuration
-Here is a basic config sample with all REQUIRED fields:
-```json
-{
-  "HAP": {
-    "lidar_net_info" : {
-      "cmd_data_port"  : 56000,
-      "push_msg_port"  : 0,
-      "point_data_port": 57000,
-      "imu_data_port"  : 58000,
-      "log_data_port"  : 59000
-    },
-    "host_net_info" : [
-      {
-        "lidar_ip"       : ["192.168.1.10","192.168.1.11","192.168.1.12", "192.168.1.13"],
-        "host_ip"        : "192.168.1.5",
-        "cmd_data_port"  : 56000,
-        "push_msg_port"  : 0,
-        "point_data_port": 57000,
-        "imu_data_port"  : 58000,
-        "log_data_port"  : 59000
-      }
-    ]
-  }
-}
-```
-### Description for REQUIRED fields  
-* "HAP": Lidar type, meaning the following configuration is for HAP lidar type; Another option is "MID360", for configuration of MID-360 lidar type.
-  * "lidar_net_info": set the ports in the lidar.
-    * "cmd_data_port": port for sending / receiving control command.
-    * "push_msg_port": port for sending push message.
-    * "point_data_port": port for sending point cloud data.
-    * "imu_data_port": port for sending imu data.
-    * "log_data_port": port for sending firmware log data.
-  * "host_net_info": set the configuration of the host machines, and the value is a list, meaning that you can configure several hosts.
-    * "lidar_ip": this is a list, indicating all ips of the lidars intended to connect to this host.
-    * "host_ip": the ip of the host you're configuring.
-    * "cmd_data_port": port for sending / receiving control command.
-    * "push_msg_port" port for receiving push message.
-    * "point_data_port": port for receiving point cloud data.
-    * "imu_data_port": port for receiving imu data.
-    * "log_data_port": port for receiving firmware log data.
-
-
-## 4.2 Full Configuration
-Here is a full sample including multi-lidar types configurations and some OPTIONAL fields:
-```json
-{
-  "master_sdk" : true,
-  "lidar_log_enable"        : true,
-  "lidar_log_cache_size_MB" : 500,
-  "lidar_log_path"          : "./",
-
-  "HAP": {
-    "lidar_net_info" : {
-      "cmd_data_port"  : 56000,
-      "push_msg_port"  : 0,
-      "point_data_port": 57000,
-      "imu_data_port"  : 58000,
-      "log_data_port"  : 59000
-    },
-    "host_net_info" : [
-      {
-        "lidar_ip"       : ["192.168.1.10","192.168.1.11","192.168.1.12", "192.168.1.13"],
-        "host_ip"        : "192.168.1.5",
-        "multicast_ip"   : "224.1.1.5",
-        "cmd_data_port"  : 56000,
-        "push_msg_port"  : 0,
-        "point_data_port": 57000,
-        "imu_data_port"  : 58000,
-        "log_data_port"  : 59000
-      }
-    ]
-  },
-  "MID360": {
-    "lidar_net_info" : {
-      "cmd_data_port"  : 56100,
-      "push_msg_port"  : 56200,
-      "point_data_port": 56300,
-      "imu_data_port"  : 56400,
-      "log_data_port"  : 56500
-    },
-    "host_net_info" : [
-      {
-        "lidar_ip"       : ["192.168.1.3"],
-        "host_ip"        : "192.168.1.5",
-        "multicast_ip"   : "224.1.1.5",
-        "cmd_data_port"  : 56101,
-        "push_msg_port"  : 56201,
-        "point_data_port": 56301,
-        "imu_data_port"  : 56401,
-        "log_data_port"  : 56501
-      }
-    ]
-  }
-}
-```
-### Description for OPTIONAL fields
-* "master_sdk": used in multi-casting scenario. 
-  * 'true' stands for master SDK and 'false' stands for slave SDK;
-  * 'master SDK' can send control command to and receive data from the lidars, while 'slave SDK' can only receive point cloud data from the lidars.
-  * NOTICE: ONLY ONE SDK (host) can be set as 'master SDK'. Others should be set as 'slave SDK'.
-* "lidar_log_enable": 'true' or 'false' represents whether to enable the firmware log.
-* "lidar_log_cache_size_MB": set the storage size for firmware log, unit: MB.
-* "lidar_log_path": set the path to store the firmware log data.
-* "multicast_ip": this field is in the parent key "host_net_info", representing the multi-casting IP.
-
-# 5. Support
-
-You can get support from Livox via:
-
-* Send an email to cs@livoxtech.com, appended with detailed description for your problem and your setup;
-* Raise a github issue
-
+欢迎提交 Issue 和 Pull Request 至此仓库的 GitHub 页面，共同完善本 ROS2 SLAM 解决方案。

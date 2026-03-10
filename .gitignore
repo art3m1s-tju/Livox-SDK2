@@ -1,2 +1,32 @@
-.vscode
-build
+.vscode/
+# C++ 编译生成的文件
+build/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ROS2 colcon 编译生成的文件
+ws_livox/build/
+ws_livox/install/
+ws_livox/log/
+
+# Python 缓存文件 (如果 ROS2 launch 文件中用到 Python)
+__pycache__/
+*.pyc
+*.pyo
+
+# 日志文件
+*.log
+
+# 其他可能产生的大体积中间文件或数据包（如果不想上传所有的地图和bag，可以取消注释下面两行）
+# rosbag2_2024_06_20-16_46_47/
+# maps/rosbag2_2024_06_20-16_46_47/
+maps/
